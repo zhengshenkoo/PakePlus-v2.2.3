@@ -1,11 +1,759 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        Hello World
-    </body>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>5G网元映射工具 - 三级优先级（共同组/相似度/最高频组）</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Noto Sans', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 24px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .upload-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 32px;
+            justify-content: space-between;
+        }
+        .upload-card {
+            flex: 1;
+            min-width: 260px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 18px 20px 22px;
+            border: 1px solid #e9ecef;
+        }
+        .upload-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e2a3a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .upload-card .badge {
+            font-size: 0.7rem;
+            background: #eef2ff;
+            color: #1e40af;
+            padding: 2px 10px;
+            border-radius: 30px;
+        }
+        .upload-card input {
+            margin-top: 12px;
+            display: block;
+            width: 100%;
+            padding: 8px 0;
+        }
+        .file-status {
+            font-size: 0.8rem;
+            color: #2c6e2c;
+            margin-top: 12px;
+            background: #f8fafc;
+            padding: 6px 10px;
+            border-radius: 12px;
+            word-break: break-all;
+        }
+        .action-bar {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin: 20px 0 28px;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn {
+            border: none;
+            background: white;
+            padding: 10px 28px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: 0.2s;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-primary {
+            background: #1e6f3f;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(30,111,63,0.2);
+        }
+        .btn-primary:hover {
+            background: #0f5a34;
+            transform: translateY(-1px);
+        }
+        .btn-export {
+            background: #dd6b20;
+            color: white;
+            border: none;
+        }
+        .btn-export:hover {
+            background: #c05621;
+        }
+        .log-area {
+            background: #1e2a2e;
+            color: #cbd5e6;
+            border-radius: 20px;
+            padding: 16px 20px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-height: 280px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-area p {
+            margin: 6px 0;
+            word-break: break-all;
+        }
+        .info-note {
+            background: #fef9e3;
+            border-left: 5px solid #f59e0b;
+            padding: 12px 18px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            margin: 20px 0 0;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-top: 35px;
+        }
+    </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <h2>📊 5GC 网元映射工具（三级优先级 + 语义相似度）</h2>
+    <p>上传三份Excel，执行UNC/UDG转换 → 第四部分（多组映射输出） → 第五部分（智能填充+加粗+备注）</p>
+
+    <div class="upload-grid">
+        <div class="upload-card">
+            <h3>📁 现网license对比结果 <span class="badge">Spart页签</span></h3>
+            <input type="file" id="fileOnline" accept=".xlsx, .xls, .csv">
+            <div id="onlineStatus" class="file-status">⚡ 未上传</div>
+        </div>
+        <div class="upload-card">
+            <h3>📁 研发映射集 <span class="badge">网元表(多页签)</span></h3>
+            <input type="file" id="fileNetElem" accept=".xlsx, .xls, .csv">
+            <div id="netElemStatus" class="file-status">⚡ 未上传</div>
+        </div>
+        <div class="upload-card">
+            <h3>📁 4改5 Bpart Spart映射表 <span class="badge">映射表</span></h3>
+            <input type="file" id="fileMapping" accept=".xlsx, .xls, .csv">
+            <div id="mappingStatus" class="file-status">⚡ 未上传</div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button id="uncBtn" class="btn btn-primary">🔁 UNC转换</button>
+        <button id="udgBtn" class="btn btn-primary">🔄 UDG转换</button>
+        <button id="exportBtn" class="btn btn-export">💾 导出填充后现网表（带粗体）</button>
+    </div>
+
+    <div class="info-note">
+        ⚙️ <strong>第五部分（三级优先级）</strong>：<br>
+        <strong>① 共同组</strong>（最高优先级）：区域内所有有效行某一组完全相同 → 填入N/O/P，M列写<strong>“全场唯一，可放心使用”</strong>（加粗）。<br>
+        <strong>② 相似度匹配</strong>（第二优先级）：应用等价规则和必中词汇，取最高相似度组填入N/O/P，M列写<strong>“此行N/O/P列数据需人为二次校验”</strong>（加粗）。<br>
+        <strong>③ 最高频组</strong>（第三优先级）：取出现频率最高的组填入N/O/P，M列写校验备注（加粗）。<br>
+        <strong>④ 无有效行</strong>：仅M列写入校验备注（加粗）。<br>
+        • 所有填充的N/O/P及M列均<strong>加粗</strong>显示。
+    </div>
+
+    <div class="log-area" id="logPanel">
+        <p>✨ 等待上传文件并点击转换按钮...</p>
+    </div>
+    <footer>处理完全在前端完成 | 导出支持粗体样式及二次校验备注</footer>
+</div>
+
+<script>
+    // ---------- 全局数据 ----------
+    let onlineWorkbook = null;
+    let netElemWorkbook = null;
+    let mappingWorkbook = null;
+    let netElemSheetsCache = {};
+    let mappingSheetData = [];
+    let mappingCols = { colC: -1, colB: -1, colE: -1, colF: -1 };
+    let currentConvertType = null;
+
+    // 存储处理后的二维数组（最终表数据）
+    let finalSheetData = null;
+
+    function addLog(msg, isError = false) {
+        const panel = document.getElementById('logPanel');
+        const p = document.createElement('p');
+        p.innerHTML = `📌 ${new Date().toLocaleTimeString()} - ${msg}`;
+        if (isError) p.style.color = "#ffb4a2";
+        else p.style.color = "#cbd5e6";
+        panel.appendChild(p);
+        p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        console.log(msg);
+    }
+
+    function readFile(file, callback) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: 'array', defval: "" });
+            callback(wb);
+        };
+        reader.onerror = () => addLog(`读取失败: ${file.name}`, true);
+        reader.readAsArrayBuffer(file);
+    }
+
+    function parseMappingColumns(mappingData) {
+        if (!mappingData || mappingData.length < 1) return { colC: -1, colB: -1, colE: -1, colF: -1 };
+        const header = mappingData[0];
+        const findCol = (names) => {
+            for (let i = 0; i < header.length; i++) {
+                const cell = (header[i] || "").toString().trim();
+                for (let n of names) {
+                    if (cell === n || cell.toLowerCase() === n.toLowerCase()) return i;
+                }
+            }
+            return -1;
+        };
+        let colC = findCol(["C", "c", "源编码", "映射C列"]);
+        let colB = findCol(["B", "b", "网元B"]);
+        let colE = findCol(["E", "e", "描述", "英文描述"]);
+        let colF = findCol(["F", "f", "特性", "功能"]);
+        if (colC === -1) colC = 2;
+        if (colB === -1) colB = 1;
+        if (colE === -1) colE = 4;
+        if (colF === -1) colF = 5;
+        addLog(`映射表列解析 -> C列索引:${colC}, B列:${colB}, E列:${colE}, F列:${colF}`);
+        return { colC, colB, colE, colF };
+    }
+
+    // 上传事件
+    document.getElementById('fileOnline').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            readFile(e.target.files[0], (wb) => {
+                onlineWorkbook = wb;
+                document.getElementById('onlineStatus').innerHTML = `✅ 已加载: ${e.target.files[0].name}`;
+                addLog(`现网表加载成功，页签: ${wb.SheetNames.join(', ')}`);
+            });
+        }
+    });
+    document.getElementById('fileNetElem').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            readFile(e.target.files[0], (wb) => {
+                netElemWorkbook = wb;
+                document.getElementById('netElemStatus').innerHTML = `✅ 已加载: ${e.target.files[0].name}`;
+                addLog(`网元表加载成功，页签数量: ${wb.SheetNames.length}`);
+                netElemSheetsCache = {};
+                for (let sname of wb.SheetNames) {
+                    const sheet = wb.Sheets[sname];
+                    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    netElemSheetsCache[sname] = data;
+                }
+            });
+        }
+    });
+    document.getElementById('fileMapping').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            readFile(e.target.files[0], (wb) => {
+                mappingWorkbook = wb;
+                document.getElementById('mappingStatus').innerHTML = `✅ 已加载: ${e.target.files[0].name}`;
+                const firstSheet = wb.Sheets[wb.SheetNames[0]];
+                mappingSheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+                addLog(`映射表原始行数: ${mappingSheetData.length}`);
+                mappingCols = parseMappingColumns(mappingSheetData);
+            });
+        }
+    });
+
+    function getOnlineSpartSheet() {
+        if (!onlineWorkbook) return null;
+        const sheetName = "Spart";
+        if (!onlineWorkbook.Sheets[sheetName]) {
+            addLog(`错误: 现网表中找不到页签 "${sheetName}"`, true);
+            return null;
+        }
+        let sheet = onlineWorkbook.Sheets[sheetName];
+        return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    }
+
+    function ensureBasicColumns(sheetArray) {
+        if (!sheetArray.length) return sheetArray;
+        let header = sheetArray[0];
+        const needCols = ['5GC BOM', '备注'];
+        let needExtend = false;
+        for (let col of needCols) if (!header.includes(col)) needExtend = true;
+        if (needExtend) {
+            let colCount = header.length;
+            for (let r = 0; r < sheetArray.length; r++) {
+                while (sheetArray[r].length < colCount + 2) sheetArray[r].push("");
+            }
+            header[colCount] = '5GC BOM';
+            header[colCount+1] = '备注';
+        }
+        return sheetArray;
+    }
+
+    function getBaseIndices(headerRow) {
+        let idx5GCBOM = headerRow.findIndex(v => v === '5GC BOM');
+        let idxRemark = headerRow.findIndex(v => v === '备注');
+        let idxJ = headerRow.findIndex(v => v === 'J');
+        if (idxJ === -1) idxJ = 9;
+        return {
+            colD: 3,
+            colJ: idxJ,
+            colL: idx5GCBOM !== -1 ? idx5GCBOM : -1,
+            colM: idxRemark !== -1 ? idxRemark : -1,
+        };
+    }
+
+    // 第三部分
+    function executePart3(convertType, onlineArray, indices) {
+        addLog(`开始执行 ${convertType} 转换...`);
+        let filterUdgy = (convertType === 'UDG');
+        let targetSheets = [];
+        for (let sname in netElemSheetsCache) {
+            let hasUDG = sname.includes('UDG');
+            if (filterUdgy && hasUDG) targetSheets.push(sname);
+            if (!filterUdgy && !hasUDG) targetSheets.push(sname);
+        }
+        addLog(`查找页签: ${targetSheets.join(', ') || '无'}`);
+        for (let rowIdx = 2; rowIdx < onlineArray.length; rowIdx++) {
+            const row = onlineArray[rowIdx];
+            if (!row || row.length <= indices.colD) continue;
+            let dVal = row[indices.colD] ? String(row[indices.colD]).trim() : "";
+            if (!dVal) continue;
+            let found = false, targetE = "", targetI = "";
+            for (let sn of targetSheets) {
+                let data = netElemSheetsCache[sn];
+                if (!data || data.length < 2) continue;
+                for (let i = 1; i < data.length; i++) {
+                    let bVal = data[i][1] ? String(data[i][1]).trim() : "";
+                    if (bVal === dVal) {
+                        found = true;
+                        targetE = data[i][4] ? String(data[i][4]).trim() : "";
+                        targetI = data[i][8] ? String(data[i][8]).trim() : "";
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+            if (found) {
+                if (indices.colL !== -1) row[indices.colL] = targetE;
+                if (indices.colM !== -1) {
+                    if (targetE.toUpperCase() === "N/A" || targetE.toUpperCase() === "NA") row[indices.colM] = targetI;
+                    else row[indices.colM] = "";
+                }
+            } else {
+                if (indices.colL !== -1) row[indices.colL] = "";
+                if (indices.colM !== -1) row[indices.colM] = "在映射集中查询失败，需手动确认";
+            }
+        }
+        addLog(`${convertType} 转换完成，L/M列已更新`);
+    }
+
+    function getMappingCandidates(lValue, mappingData, cols) {
+        if (!mappingData || mappingData.length < 2 || cols.colC === -1) return [];
+        let candidates = [];
+        for (let rowIdx = 1; rowIdx < mappingData.length; rowIdx++) {
+            let cVal = mappingData[rowIdx][cols.colC] ? String(mappingData[rowIdx][cols.colC]).trim() : "";
+            if (cVal === lValue) {
+                let foundRow = null;
+                for (let up = rowIdx - 1; up >= 1; up--) {
+                    let fVal = mappingData[up][cols.colF] ? String(mappingData[up][cols.colF]).trim() : "";
+                    if (fVal !== "" && fVal !== "Default") {
+                        foundRow = up;
+                        break;
+                    }
+                }
+                if (foundRow !== null) {
+                    let cUp = mappingData[foundRow][cols.colC] ? String(mappingData[foundRow][cols.colC]).trim() : "";
+                    let eUp = mappingData[foundRow][cols.colE] ? String(mappingData[foundRow][cols.colE]).trim() : "";
+                    let fUp = mappingData[foundRow][cols.colF] ? String(mappingData[foundRow][cols.colF]).trim() : "";
+                    candidates.push({ C: cUp, E: eUp, F: fUp });
+                }
+            }
+        }
+        return candidates;
+    }
+
+    // 第四部分：多组输出，动态扩展列
+    function executePart4(onlineArray, baseIndices, mappingData, mappingCols) {
+        addLog(`第四部分：开始多组映射输出（L列在映射表C列查询，输出所有匹配组）`);
+        let rowCandidates = [];
+        for (let rowIdx = 2; rowIdx < onlineArray.length; rowIdx++) {
+            const row = onlineArray[rowIdx];
+            let lVal = (baseIndices.colL !== -1 && row.length > baseIndices.colL) ? String(row[baseIndices.colL]).trim() : "";
+            let cands = [];
+            if (lVal !== "") cands = getMappingCandidates(lVal, mappingData, mappingCols);
+            rowCandidates.push({ rowIdx, cands });
+            if (cands.length > 0) {
+                let candStr = cands.map((c, idx) => `[${idx+1}] C="${c.C}" E="${c.E}" F="${c.F}"`).join(' ; ');
+                addLog(`行${rowIdx+1} [L值=${lVal}] 候选数组(${cands.length}项): ${candStr}`);
+            } else {
+                addLog(`行${rowIdx+1} [L值=${lVal}] 候选数组: 无匹配项`);
+            }
+        }
+
+        let maxGroups = 0;
+        for (let item of rowCandidates) if (item.cands.length > maxGroups) maxGroups = item.cands.length;
+        addLog(`最大候选组数: ${maxGroups}`);
+
+        let oldHeader = onlineArray[0];
+        let baseColCount = baseIndices.colM + 1;
+        let newHeader = [...oldHeader.slice(0, baseColCount)];
+        for (let g = 1; g <= maxGroups; g++) {
+            if (g === 1) newHeader.push('5GC Spart', 'English Description', '对外型号');
+            else newHeader.push(`5GC Spart_${g}`, `English Description_${g}`, `对外型号_${g}`);
+        }
+        onlineArray[0] = newHeader;
+
+        for (let idx = 0; idx < rowCandidates.length; idx++) {
+            let rowData = onlineArray[2 + idx];
+            let cands = rowCandidates[idx].cands;
+            let neededLen = baseColCount + maxGroups * 3;
+            while (rowData.length < neededLen) rowData.push("");
+            for (let g = 0; g < maxGroups; g++) {
+                let baseCol = baseColCount + g * 3;
+                rowData[baseCol] = "";
+                rowData[baseCol+1] = "";
+                rowData[baseCol+2] = "";
+            }
+            for (let g = 0; g < cands.length; g++) {
+                let cand = cands[g];
+                let baseCol = baseColCount + g * 3;
+                rowData[baseCol] = cand.C;
+                rowData[baseCol+1] = cand.E;
+                rowData[baseCol+2] = cand.F;
+            }
+        }
+        addLog(`第四部分完成，动态添加了 ${maxGroups} 组列，数据已填充。`);
+        return maxGroups;
+    }
+
+    // ---------- 语义相似度计算（带规则） ----------
+    const level1EqualMap = {
+        "2.5g&3g": "2.5g/3g",
+        "2.5g/3g": "2.5g&3g"
+    };
+    const level2EqualMap = {
+        "software": "basic software",
+        "basic software": "software"
+    };
+    const mustHaveWords = ["NB-IoT","Throughput","Signaling Storm Prevention","Network Evolution Solution","Security Solution Value"];
+
+    function preprocessForSimilarity(str) {
+        if (!str) return "";
+        let s = str.toLowerCase().trim();
+        s = s.replace(/[^\w\s\u4e00-\u9fa5\/&\-]/g, ' ');
+        return s.replace(/\s+/g, ' ').trim();
+    }
+
+    function checkMustWords(eDesc, jVal) {
+        let eLow = eDesc.toLowerCase();
+        let jLow = jVal.toLowerCase();
+        for (let mw of mustHaveWords) {
+            let lowMw = mw.toLowerCase();
+            if (eLow.includes(lowMw) && jLow.includes(lowMw)) return true;
+        }
+        return false;
+    }
+
+    function applyEquivalence(str) {
+        let low = str.toLowerCase();
+        for (let [k, v] of Object.entries(level1EqualMap)) {
+            if (low === k) return v;
+            if (low === v) return k;
+        }
+        for (let [k, v] of Object.entries(level2EqualMap)) {
+            if (low === k) return v;
+            if (low === v) return k;
+        }
+        return low;
+    }
+
+    function countConsecutiveWordsMatch(eProc, jProc) {
+        let wordsE = eProc.split(/\s+/);
+        let wordsJ = jProc.split(/\s+/);
+        let maxLen = 0;
+        for (let i = 0; i < wordsE.length; i++) {
+            for (let j = 0; j < wordsJ.length; j++) {
+                let len = 0;
+                while (i+len < wordsE.length && j+len < wordsJ.length && wordsE[i+len] === wordsJ[j+len]) len++;
+                if (len > maxLen) maxLen = len;
+            }
+        }
+        return maxLen;
+    }
+
+    function calculateSemanticScore(eDesc, jVal) {
+        if (!eDesc || !jVal) return 0;
+        let rawE = eDesc.trim();
+        let rawJ = jVal.trim();
+        if (checkMustWords(rawE, rawJ)) return 10000;
+        let eProc = preprocessForSimilarity(rawE);
+        let jProc = preprocessForSimilarity(rawJ);
+        let eEquiv = applyEquivalence(eProc);
+        let jEquiv = applyEquivalence(jProc);
+        if (eEquiv === jEquiv) return 5000;
+        let consec = countConsecutiveWordsMatch(eProc, jProc);
+        if (consec >= 3) return 3000 + consec * 20;
+        if (consec === 2) return 1000;
+        if (consec === 1) return 200;
+        if (eProc.includes(jProc) || jProc.includes(eProc)) return 500;
+        let maxLen = 0;
+        for (let i = 0; i < eProc.length; i++) {
+            for (let j = 0; j < jProc.length; j++) {
+                let len = 0;
+                while (i+len < eProc.length && j+len < jProc.length && eProc[i+len] === jProc[j+len]) len++;
+                if (len > maxLen) maxLen = len;
+            }
+        }
+        let ratio = maxLen / Math.max(eProc.length, jProc.length);
+        return Math.floor(ratio * 100);
+    }
+
+    // 第五部分：三级优先级
+    function executePart5(onlineArray, baseIndices, maxGroups) {
+        addLog(`第五部分：锚点行后处理 - 优先级：共同组＞相似度匹配＞最高频组`);
+        const startDataRow = 2;
+        const totalRows = onlineArray.length;
+        // 获取A列最后一个非空行
+        let lastNonEmptyRow = startDataRow;
+        for (let r = totalRows - 1; r >= startDataRow; r--) {
+            let aVal = onlineArray[r][0] ? String(onlineArray[r][0]).trim() : "";
+            if (aVal !== "") { lastNonEmptyRow = r; break; }
+        }
+        addLog(`A列最后一个非空行索引: ${lastNonEmptyRow+1}`);
+
+        // 获取所有锚点行（J列非空）
+        let anchorRows = [];
+        for (let i = startDataRow; i < totalRows; i++) {
+            let jVal = onlineArray[i][baseIndices.colJ] ? String(onlineArray[i][baseIndices.colJ]).trim() : "";
+            if (jVal !== "") anchorRows.push(i);
+        }
+        if (anchorRows.length === 0) {
+            addLog("没有找到J列非空的行，跳过第五部分。");
+            return;
+        }
+        addLog(`找到 ${anchorRows.length} 个锚点行: ${anchorRows.map(r => r+1).join(', ')}`);
+
+        let baseColCount = baseIndices.colM + 1;
+        let nCol = baseColCount;      // 第一组 "5GC Spart" 列
+        let oCol = baseColCount + 1;
+        let pCol = baseColCount + 2;
+
+        if (!window._boldCells) window._boldCells = [];
+
+        for (let idx = 0; idx < anchorRows.length; idx++) {
+            let anchorRow = anchorRows[idx];
+            let nextAnchorRow = (idx + 1 < anchorRows.length) ? anchorRows[idx+1] : (lastNonEmptyRow + 1); // 最后一个锚点行区域结束于 lastNonEmptyRow
+            let startScan = anchorRow + 1;
+            let endScan = nextAnchorRow - 1;
+
+            let anchorJ = onlineArray[anchorRow][baseIndices.colJ] ? String(onlineArray[anchorRow][baseIndices.colJ]).trim() : "";
+
+            // 收集区域内所有N列非空的行，记录各组值
+            let rowsGroups = [];
+            for (let r = startScan; r <= endScan; r++) {
+                let row = onlineArray[r];
+                let firstC = row[nCol] ? String(row[nCol]).trim() : "";
+                if (firstC === "") continue;
+                let groups = [];
+                for (let g = 0; g < maxGroups; g++) {
+                    let baseCol = baseColCount + g * 3;
+                    let cVal = row[baseCol] ? String(row[baseCol]).trim() : "";
+                    let eVal = row[baseCol+1] ? String(row[baseCol+1]).trim() : "";
+                    let fVal = row[baseCol+2] ? String(row[baseCol+2]).trim() : "";
+                    groups.push({ C: cVal, E: eVal, F: fVal });
+                }
+                rowsGroups.push(groups);
+            }
+
+            // 无有效行
+            if (rowsGroups.length === 0) {
+                addLog(`锚点行 ${anchorRow+1} 扫描区域内没有N列非空的行，仅在M列添加备注`);
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "此行N/O/P列数据需人为二次校验";
+                    window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                }
+                continue;
+            }
+
+            // 1) 共同组（优先级最高）
+            let commonGroupIndex = -1;
+            for (let g = 0; g < maxGroups; g++) {
+                let firstGroup = rowsGroups[0][g];
+                if (firstGroup.C === "" && firstGroup.E === "" && firstGroup.F === "") continue;
+                let allSame = rowsGroups.every(rowGroups => {
+                    let cur = rowGroups[g];
+                    return cur.C === firstGroup.C && cur.E === firstGroup.E && cur.F === firstGroup.F;
+                });
+                if (allSame) {
+                    commonGroupIndex = g;
+                    break;
+                }
+            }
+
+            if (commonGroupIndex !== -1) {
+                let commonGroup = rowsGroups[0][commonGroupIndex];
+                onlineArray[anchorRow][nCol] = commonGroup.C;
+                onlineArray[anchorRow][oCol] = commonGroup.E;
+                onlineArray[anchorRow][pCol] = commonGroup.F;
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "全场唯一，可放心使用";
+                }
+                window._boldCells.push({ row: anchorRow, col: nCol });
+                window._boldCells.push({ row: anchorRow, col: oCol });
+                window._boldCells.push({ row: anchorRow, col: pCol });
+                if (baseIndices.colM !== -1) window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                addLog(`锚点行 ${anchorRow+1} → 共同组 (组索引${commonGroupIndex+1}): C="${commonGroup.C}", E="${commonGroup.E}", F="${commonGroup.F}" (备注:全场唯一)`);
+                continue;
+            }
+
+            // 2) 相似度匹配（第二优先级）
+            let bestSimGroup = null;
+            let bestSimScore = -1;
+            for (let rowGroups of rowsGroups) {
+                for (let g = 0; g < maxGroups; g++) {
+                    let group = rowGroups[g];
+                    if (group.E === "") continue;
+                    let score = calculateSemanticScore(group.E, anchorJ);
+                    if (score > bestSimScore) {
+                        bestSimScore = score;
+                        bestSimGroup = group;
+                    }
+                }
+            }
+            if (bestSimGroup && bestSimScore > 0) {
+                onlineArray[anchorRow][nCol] = bestSimGroup.C;
+                onlineArray[anchorRow][oCol] = bestSimGroup.E;
+                onlineArray[anchorRow][pCol] = bestSimGroup.F;
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "此行N/O/P列数据需人为二次校验";
+                }
+                window._boldCells.push({ row: anchorRow, col: nCol });
+                window._boldCells.push({ row: anchorRow, col: oCol });
+                window._boldCells.push({ row: anchorRow, col: pCol });
+                if (baseIndices.colM !== -1) window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                addLog(`锚点行 ${anchorRow+1} → 相似度匹配 (得分=${bestSimScore}): C="${bestSimGroup.C}", E="${bestSimGroup.E}", F="${bestSimGroup.F}" (已加备注)`);
+                continue;
+            }
+
+            // 3) 最高频组（第三优先级）
+            let groupFreq = new Map();
+            for (let rowGroups of rowsGroups) {
+                for (let g = 0; g < maxGroups; g++) {
+                    let group = rowGroups[g];
+                    let key = `${group.C}|${group.E}|${group.F}`;
+                    if (groupFreq.has(key)) {
+                        groupFreq.get(key).count++;
+                    } else {
+                        groupFreq.set(key, { count: 1, group: group });
+                    }
+                }
+            }
+            let bestFreqGroup = null;
+            let maxCount = 0;
+            for (let entry of groupFreq.values()) {
+                if (entry.count > maxCount) {
+                    maxCount = entry.count;
+                    bestFreqGroup = entry.group;
+                }
+            }
+            if (bestFreqGroup) {
+                onlineArray[anchorRow][nCol] = bestFreqGroup.C;
+                onlineArray[anchorRow][oCol] = bestFreqGroup.E;
+                onlineArray[anchorRow][pCol] = bestFreqGroup.F;
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "此行N/O/P列数据需人为二次校验";
+                }
+                window._boldCells.push({ row: anchorRow, col: nCol });
+                window._boldCells.push({ row: anchorRow, col: oCol });
+                window._boldCells.push({ row: anchorRow, col: pCol });
+                if (baseIndices.colM !== -1) window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                addLog(`锚点行 ${anchorRow+1} → 最高频组 (出现${maxCount}次): C="${bestFreqGroup.C}", E="${bestFreqGroup.E}", F="${bestFreqGroup.F}" (已加备注)`);
+            } else {
+                // 保底：仅加备注
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "此行N/O/P列数据需人为二次校验";
+                    window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                }
+                addLog(`锚点行 ${anchorRow+1} 未找到任何有效组，仅在M列添加备注。`);
+            }
+        }
+        addLog(`第五部分处理完成。`);
+    }
+
+    // 主流程
+    async function runFullConversion(convertType) {
+        if (!onlineWorkbook) { addLog("请先上传现网license文件", true); return; }
+        if (!netElemWorkbook || Object.keys(netElemSheetsCache).length === 0) { addLog("请上传网元表(研发映射集)", true); return; }
+        if (!mappingWorkbook || !mappingSheetData.length) { addLog("请上传映射表(4改5映射表)", true); return; }
+        if (mappingCols.colC === -1) { addLog("映射表C列索引解析失败，请确保包含C列", true); return; }
+        currentConvertType = convertType;
+        let onlineRaw = getOnlineSpartSheet();
+        if (!onlineRaw) { addLog("现网表中无Spart页签", true); return; }
+        let onlineExtended = ensureBasicColumns([...onlineRaw]);
+        let baseIndices = getBaseIndices(onlineExtended[0]);
+        if (baseIndices.colL === -1 || baseIndices.colM === -1) { addLog("基础扩展列异常", true); return; }
+        executePart3(convertType, onlineExtended, baseIndices);
+        let maxGroups = executePart4(onlineExtended, baseIndices, mappingSheetData, mappingCols);
+        executePart5(onlineExtended, baseIndices, maxGroups);
+        finalSheetData = onlineExtended;
+        addLog(`✅ 全部处理完成，可点击导出按钮下载带粗体样式及备注的Excel文件。`);
+    }
+
+    // 导出使用 ExcelJS 支持粗体
+    async function exportResult() {
+        if (!finalSheetData) { addLog("请先执行转换后再导出", true); return; }
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Spart');
+            for (let r = 0; r < finalSheetData.length; r++) {
+                const row = finalSheetData[r];
+                worksheet.addRow(row);
+            }
+            if (window._boldCells && window._boldCells.length) {
+                for (let cell of window._boldCells) {
+                    const rowNum = cell.row + 1;
+                    const colLetter = XLSX.utils.encode_col(cell.col);
+                    const cellAddress = colLetter + rowNum;
+                    const excelCell = worksheet.getCell(cellAddress);
+                    excelCell.font = { bold: true };
+                }
+                addLog(`已为 ${window._boldCells.length} 个单元格设置粗体。`);
+            } else {
+                addLog("无需要加粗的单元格。");
+            }
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/octet-stream" });
+            const link = document.createElement('a');
+            const filename = `现网表_处理后_${currentConvertType || 'Result'}.xlsx`;
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            addLog(`导出成功: ${filename}，粗体已应用，备注已添加。`);
+        } catch (err) {
+            addLog(`导出失败: ${err.message}`, true);
+        }
+    }
+
+    document.getElementById('uncBtn').addEventListener('click', () => runFullConversion('UNC'));
+    document.getElementById('udgBtn').addEventListener('click', () => runFullConversion('UDG'));
+    document.getElementById('exportBtn').addEventListener('click', exportResult);
+</script>
+</body>
 </html>
