@@ -1,11 +1,813 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        Hello World
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>5GC NE Mapping Tool - Fixed Common Group & Save Path</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Noto Sans', sans-serif;
+        }
+        body {
+            background: #0a0c10;
+            margin: 0;
+            padding: 24px 20px;
+            color: #e6edf3;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .upload-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 32px;
+            justify-content: space-between;
+        }
+        .upload-card {
+            flex: 1;
+            min-width: 260px;
+            background: #1e1f24;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            padding: 18px 20px 22px;
+            border: 1px solid #2c2f36;
+        }
+        .upload-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f0f3f8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .upload-card .badge {
+            font-size: 0.7rem;
+            background: #2d3748;
+            color: #cbd5e1;
+            padding: 2px 10px;
+            border-radius: 30px;
+        }
+        .upload-card input {
+            margin-top: 12px;
+            display: block;
+            width: 100%;
+            padding: 8px 0;
+            color-scheme: dark;
+            background: #2c2f36;
+            color: #e6edf3;
+            border: 1px solid #3a3f4a;
+            border-radius: 12px;
+            padding: 8px 12px;
+        }
+        .file-status {
+            font-size: 0.8rem;
+            color: #9bdeac;
+            margin-top: 12px;
+            background: #1b1f24;
+            padding: 6px 10px;
+            border-radius: 12px;
+            word-break: break-all;
+        }
+        .action-bar {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin: 20px 0 28px;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn {
+            border: none;
+            background: #2d3748;
+            color: #e6edf3;
+            padding: 10px 28px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #4a5568;
+        }
+        .btn-primary {
+            background: #2c6e4f;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .btn-primary:hover {
+            background: #1f5a40;
+            transform: translateY(-1px);
+        }
+        .btn-export {
+            background: #b45309;
+            color: white;
+            border: none;
+        }
+        .btn-export:hover {
+            background: #9b3e06;
+        }
+        .log-area {
+            background: #101215;
+            color: #cbd5e6;
+            border-radius: 20px;
+            padding: 16px 20px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-height: 280px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #2c2f36;
+        }
+        .log-area p {
+            margin: 6px 0;
+            word-break: break-all;
+        }
+        .info-note {
+            background: #1e2a2e;
+            border-left: 5px solid #f59e0b;
+            padding: 12px 18px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            margin: 20px 0 0;
+            color: #ddd;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #8b949e;
+            margin-top: 35px;
+        }
+    </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div style="display: flex; align-items: center;">
+        <h2>📊 4G-to-5G NE license mapping tool</h2>
+        <h2 class="card-title" style="color: transparent; background: linear-gradient(135deg, #FFF8E7, #FFF0D4, #FFE8C7); background-clip: text; -webkit-background-clip: text; font-weight: bold; text-shadow: 0 0 8px rgba(255,240,200,0.6); margin-left: auto; padding-left: 0; transition: all 0.3s;" onmouseover="this.style.textShadow='0 0 15px rgba(255,235,180,0.9)';" onmouseout="this.style.textShadow='0 0 8px rgba(255,240,200,0.6)';">From MY MSSC Core</h2>
+    </div>
+    <p>Upload the same license file of the same NE to ESDP and download the compare file(EXCEL Format, including "Spart" Sheet). → Convert to UNC/UDG target format. → Export the Spart sheet, filter column J, the target Sparts of the 5GC platform are mapped to columns N/O/P.
+    </p>
+
+    <div class="upload-grid">
+        <div class="upload-card">
+            <h3>📁 Excel Comparison for current Core NE License Files <span class="badge">"Spart" sheet</span></h3>
+            <input type="file" id="fileOnline" accept=".xlsx, .xls, .csv">
+            <div id="onlineStatus" class="file-status">⚡ Not uploaded</div>
+        </div>
+        <div class="upload-card">
+            <h3>📁 Upload the license mapping set <span class="badge">Provided by Xu Hao/00935646</span></h3>
+            <input type="file" id="fileNetElem" accept=".xlsx, .xls, .csv">
+            <div id="netElemStatus" class="file-status">⚡ Not uploaded</div>
+        </div>
+        <div class="upload-card">
+            <h3>📁 Upload 4-5 Bpart Spart mapping <span class="badge">Provided by Xu Hao/00935646</span></h3>
+            <input type="file" id="fileMapping" accept=".xlsx, .xls, .csv">
+            <div id="mappingStatus" class="file-status">⚡ Not uploaded</div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button id="uncBtn" class="btn btn-primary">🔁 UNC Conversion</button>
+        <button id="udgBtn" class="btn btn-primary">🔄 UDG Conversion</button>
+        <button id="exportBtn" class="btn btn-export">💾 Export the Mapped Excel</button>
+    </div>
+
+    <div class="info-note">
+        ⚙️ <strong>Instructions:</strong>:<br>
+        • <strong>Cloud-based Platform NE Conversion</strong>: Currently, the cloud-based CGW/DGW is most effectively converted to the cloud-based UNC/UDG version.<br>
+        • <strong>Traditional Platform NE Conversion</strong>: For the traditional license comparison file where the Spart column is empty, manually copy the data in column A of the Bpart sheet to column D of the Spart sheet (starting from row 3) before uploading the file.<br>
+        • <strong>Exporting File</strong>: After the export, you can filter the rows in which column J is not empty and view the remarks, Spart code of the 5GC NE, description of the 5GC NE, and external model in columns M, N, O, and P of the corresponding rows.<br>
+        • <strong>Description of Column M</strong>: If the message "Unique in the whole site, safe to use" is displayed in column M, the corresponding Spart code in column N can be directly used. If the message "The conclusion of N/O/P needs to be verified with MO" is displayed in column M, you are advised to confirm with the MO.<br>
+    </div>
+
+    <div class="log-area" id="logPanel">
+        <p>✨ Ready. Upload files and click a conversion button...</p>
+    </div>
+    <footer>Processing entirely in-browser | Export respects your chosen folder</footer>
+</div>
+
+<script>
+    // ---------- Global data ----------
+    let onlineWorkbook = null;
+    let netElemWorkbook = null;
+    let mappingWorkbook = null;
+    let netElemSheetsCache = {};
+    let mappingSheetData = [];
+    let mappingCols = { colC: -1, colB: -1, colE: -1, colF: -1 };
+    let currentConvertType = null;
+    let finalSheetData = null;
+
+    function addLog(msg, isError = false) {
+        const panel = document.getElementById('logPanel');
+        const p = document.createElement('p');
+        p.innerHTML = `📌 ${new Date().toLocaleTimeString()} - ${msg}`;
+        if (isError) p.style.color = "#ffb4a2";
+        else p.style.color = "#cbd5e6";
+        panel.appendChild(p);
+        p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        console.log(msg);
+    }
+
+    function readFile(file, callback) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: 'array', defval: "" });
+            callback(wb);
+        };
+        reader.onerror = () => addLog(`Failed to read: ${file.name}`, true);
+        reader.readAsArrayBuffer(file);
+    }
+
+    function parseMappingColumns(mappingData) {
+        if (!mappingData || mappingData.length < 1) return { colC: -1, colB: -1, colE: -1, colF: -1 };
+        const header = mappingData[0];
+        const findCol = (names) => {
+            for (let i = 0; i < header.length; i++) {
+                const cell = (header[i] || "").toString().trim();
+                for (let n of names) {
+                    if (cell === n || cell.toLowerCase() === n.toLowerCase()) return i;
+                }
+            }
+            return -1;
+        };
+        let colC = findCol(["C", "c", "Source code", "Mapping C"]);
+        let colB = findCol(["B", "b", "NE B"]);
+        let colE = findCol(["E", "e", "Description", "English Description"]);
+        let colF = findCol(["F", "f", "Feature", "Function"]);
+        if (colC === -1) colC = 2;
+        if (colB === -1) colB = 1;
+        if (colE === -1) colE = 4;
+        if (colF === -1) colF = 5;
+        addLog(`Mapping table column indices → C:${colC}, B:${colB}, E:${colE}, F:${colF}`);
+        return { colC, colB, colE, colF };
+    }
+
+    document.getElementById('fileOnline').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            readFile(e.target.files[0], (wb) => {
+                onlineWorkbook = wb;
+                document.getElementById('onlineStatus').innerHTML = `✅ Loaded: ${e.target.files[0].name}`;
+                addLog(`Online workbook loaded, sheets: ${wb.SheetNames.join(', ')}`);
+            });
+        }
+    });
+    document.getElementById('fileNetElem').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            readFile(e.target.files[0], (wb) => {
+                netElemWorkbook = wb;
+                document.getElementById('netElemStatus').innerHTML = `✅ Loaded: ${e.target.files[0].name}`;
+                addLog(`NE workbook loaded, sheet count: ${wb.SheetNames.length}`);
+                netElemSheetsCache = {};
+                for (let sname of wb.SheetNames) {
+                    const sheet = wb.Sheets[sname];
+                    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    netElemSheetsCache[sname] = data;
+                }
+            });
+        }
+    });
+    document.getElementById('fileMapping').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            readFile(e.target.files[0], (wb) => {
+                mappingWorkbook = wb;
+                document.getElementById('mappingStatus').innerHTML = `✅ Loaded: ${e.target.files[0].name}`;
+                const firstSheet = wb.Sheets[wb.SheetNames[0]];
+                mappingSheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+                addLog(`Mapping table rows: ${mappingSheetData.length}`);
+                mappingCols = parseMappingColumns(mappingSheetData);
+            });
+        }
+    });
+
+    function getOnlineSpartSheet() {
+        if (!onlineWorkbook) return null;
+        const sheetName = "Spart";
+        if (!onlineWorkbook.Sheets[sheetName]) {
+            addLog(`Error: Sheet "${sheetName}" not found in online workbook`, true);
+            return null;
+        }
+        let sheet = onlineWorkbook.Sheets[sheetName];
+        return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    }
+
+    function ensureBasicColumns(sheetArray) {
+        if (!sheetArray.length) return sheetArray;
+        let header = sheetArray[0];
+        const needCols = ['5GC BOM', 'Remarks'];
+        let needExtend = false;
+        for (let col of needCols) if (!header.includes(col)) needExtend = true;
+        if (needExtend) {
+            let colCount = header.length;
+            for (let r = 0; r < sheetArray.length; r++) {
+                while (sheetArray[r].length < colCount + 2) sheetArray[r].push("");
+            }
+            header[colCount] = '5GC BOM';
+            header[colCount+1] = 'Remarks';
+        }
+        return sheetArray;
+    }
+
+    function getBaseIndices(headerRow) {
+        let idx5GCBOM = headerRow.findIndex(v => v === '5GC BOM');
+        let idxRemark = headerRow.findIndex(v => v === 'Remarks');
+        let idxJ = headerRow.findIndex(v => v === 'J');
+        if (idxJ === -1) idxJ = 9;
+        return {
+            colD: 3,
+            colJ: idxJ,
+            colL: idx5GCBOM !== -1 ? idx5GCBOM : -1,
+            colM: idxRemark !== -1 ? idxRemark : -1,
+        };
+    }
+
+    // Part 3
+    function executePart3(convertType, onlineArray, indices) {
+        addLog(`Starting ${convertType} conversion...`);
+        let filterUdgy = (convertType === 'UDG');
+        let targetSheets = [];
+        for (let sname in netElemSheetsCache) {
+            let hasUDG = sname.includes('UDG');
+            if (filterUdgy && hasUDG) targetSheets.push(sname);
+            if (!filterUdgy && !hasUDG) targetSheets.push(sname);
+        }
+        addLog(`Target sheets: ${targetSheets.join(', ') || 'none'}`);
+        for (let rowIdx = 2; rowIdx < onlineArray.length; rowIdx++) {
+            const row = onlineArray[rowIdx];
+            if (!row || row.length <= indices.colD) continue;
+            let dVal = row[indices.colD] ? String(row[indices.colD]).trim() : "";
+            if (!dVal) continue;
+            let found = false, targetE = "", targetI = "";
+            for (let sn of targetSheets) {
+                let data = netElemSheetsCache[sn];
+                if (!data || data.length < 2) continue;
+                for (let i = 1; i < data.length; i++) {
+                    let bVal = data[i][1] ? String(data[i][1]).trim() : "";
+                    if (bVal === dVal) {
+                        found = true;
+                        targetE = data[i][4] ? String(data[i][4]).trim() : "";
+                        targetI = data[i][8] ? String(data[i][8]).trim() : "";
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+            if (found) {
+                if (indices.colL !== -1) row[indices.colL] = targetE;
+                if (indices.colM !== -1) {
+                    if (targetE.toUpperCase() === "N/A" || targetE.toUpperCase() === "NA") row[indices.colM] = targetI;
+                    else row[indices.colM] = "";
+                }
+            } else {
+                if (indices.colL !== -1) row[indices.colL] = "";
+                if (indices.colM !== -1) row[indices.colM] = "Lookup failed in mapping set, manual confirmation needed";
+            }
+        }
+        addLog(`${convertType} conversion finished, L/M columns updated.`);
+    }
+
+    function getMappingCandidates(lValue, mappingData, cols) {
+        if (!mappingData || mappingData.length < 2 || cols.colC === -1) return [];
+        let candidates = [];
+        for (let rowIdx = 1; rowIdx < mappingData.length; rowIdx++) {
+            let cVal = mappingData[rowIdx][cols.colC] ? String(mappingData[rowIdx][cols.colC]).trim() : "";
+            if (cVal === lValue) {
+                let foundRow = null;
+                for (let up = rowIdx - 1; up >= 1; up--) {
+                    let fVal = mappingData[up][cols.colF] ? String(mappingData[up][cols.colF]).trim() : "";
+                    if (fVal !== "" && fVal !== "Default") {
+                        foundRow = up;
+                        break;
+                    }
+                }
+                if (foundRow !== null) {
+                    let cUp = mappingData[foundRow][cols.colC] ? String(mappingData[foundRow][cols.colC]).trim() : "";
+                    let eUp = mappingData[foundRow][cols.colE] ? String(mappingData[foundRow][cols.colE]).trim() : "";
+                    let fUp = mappingData[foundRow][cols.colF] ? String(mappingData[foundRow][cols.colF]).trim() : "";
+                    candidates.push({ C: cUp, E: eUp, F: fUp });
+                }
+            }
+        }
+        return candidates;
+    }
+
+    // Part 4: multi-group output
+    function executePart4(onlineArray, baseIndices, mappingData, mappingCols) {
+        addLog(`Part 4: Multi-group mapping output (L value lookup in mapping table column C, output all groups)`);
+        let rowCandidates = [];
+        for (let rowIdx = 2; rowIdx < onlineArray.length; rowIdx++) {
+            const row = onlineArray[rowIdx];
+            let lVal = (baseIndices.colL !== -1 && row.length > baseIndices.colL) ? String(row[baseIndices.colL]).trim() : "";
+            let cands = [];
+            if (lVal !== "") cands = getMappingCandidates(lVal, mappingData, mappingCols);
+            rowCandidates.push({ rowIdx, cands });
+            if (cands.length > 0) {
+                let candStr = cands.map((c, idx) => `[${idx+1}] C="${c.C}" E="${c.E}" F="${c.F}"`).join(' ; ');
+                addLog(`Row ${rowIdx+1} [L=${lVal}] candidates (${cands.length}): ${candStr}`);
+            } else {
+                addLog(`Row ${rowIdx+1} [L=${lVal}] candidates: none`);
+            }
+        }
+
+        let maxGroups = 0;
+        for (let item of rowCandidates) if (item.cands.length > maxGroups) maxGroups = item.cands.length;
+        addLog(`Maximum number of groups: ${maxGroups}`);
+
+        let oldHeader = onlineArray[0];
+        let baseColCount = baseIndices.colM + 1;
+        let newHeader = [...oldHeader.slice(0, baseColCount)];
+        for (let g = 1; g <= maxGroups; g++) {
+            if (g === 1) newHeader.push('5GC Spart', 'English Description', 'External Model');
+            else newHeader.push(`5GC Spart_${g}`, `English Description_${g}`, `External Model_${g}`);
+        }
+        onlineArray[0] = newHeader;
+
+        for (let idx = 0; idx < rowCandidates.length; idx++) {
+            let rowData = onlineArray[2 + idx];
+            let cands = rowCandidates[idx].cands;
+            let neededLen = baseColCount + maxGroups * 3;
+            while (rowData.length < neededLen) rowData.push("");
+            for (let g = 0; g < maxGroups; g++) {
+                let baseCol = baseColCount + g * 3;
+                rowData[baseCol] = "";
+                rowData[baseCol+1] = "";
+                rowData[baseCol+2] = "";
+            }
+            for (let g = 0; g < cands.length; g++) {
+                let cand = cands[g];
+                let baseCol = baseColCount + g * 3;
+                rowData[baseCol] = cand.C;
+                rowData[baseCol+1] = cand.E;
+                rowData[baseCol+2] = cand.F;
+            }
+        }
+        addLog(`Part 4 finished, added ${maxGroups} group columns.`);
+        return maxGroups;
+    }
+
+    // Semantic similarity functions (unchanged)
+    const level1EqualMap = {
+        "2.5g&3g": "2.5g/3g",
+        "2.5g/3g": "2.5g&3g"
+    };
+    const level2EqualMap = {
+        "software": "basic software",
+        "basic software": "software"
+    };
+    const mustHaveWords = ["NB-IoT","Throughput","Signaling Storm Prevention","Network Evolution Solution","Security Solution Value"];
+
+    function preprocessForSimilarity(str) {
+        if (!str) return "";
+        let s = str.toLowerCase().trim();
+        s = s.replace(/[^\w\s\u4e00-\u9fa5\/&\-]/g, ' ');
+        return s.replace(/\s+/g, ' ').trim();
+    }
+
+    function checkMustWords(eDesc, jVal) {
+        let eLow = eDesc.toLowerCase();
+        let jLow = jVal.toLowerCase();
+        for (let mw of mustHaveWords) {
+            let lowMw = mw.toLowerCase();
+            if (eLow.includes(lowMw) && jLow.includes(lowMw)) return true;
+        }
+        return false;
+    }
+
+    function applyEquivalence(str) {
+        let low = str.toLowerCase();
+        for (let [k, v] of Object.entries(level1EqualMap)) {
+            if (low === k) return v;
+            if (low === v) return k;
+        }
+        for (let [k, v] of Object.entries(level2EqualMap)) {
+            if (low === k) return v;
+            if (low === v) return k;
+        }
+        return low;
+    }
+
+    function countConsecutiveWordsMatch(eProc, jProc) {
+        let wordsE = eProc.split(/\s+/);
+        let wordsJ = jProc.split(/\s+/);
+        let maxLen = 0;
+        for (let i = 0; i < wordsE.length; i++) {
+            for (let j = 0; j < wordsJ.length; j++) {
+                let len = 0;
+                while (i+len < wordsE.length && j+len < wordsJ.length && wordsE[i+len] === wordsJ[j+len]) len++;
+                if (len > maxLen) maxLen = len;
+            }
+        }
+        return maxLen;
+    }
+
+    function calculateSemanticScore(eDesc, jVal) {
+        if (!eDesc || !jVal) return 0;
+        let rawE = eDesc.trim();
+        let rawJ = jVal.trim();
+        if (checkMustWords(rawE, rawJ)) return 10000;
+        let eProc = preprocessForSimilarity(rawE);
+        let jProc = preprocessForSimilarity(rawJ);
+        let eEquiv = applyEquivalence(eProc);
+        let jEquiv = applyEquivalence(jProc);
+        if (eEquiv === jEquiv) return 5000;
+        let consec = countConsecutiveWordsMatch(eProc, jProc);
+        if (consec >= 3) return 3000 + consec * 20;
+        if (consec === 2) return 1000;
+        if (consec === 1) return 200;
+        if (eProc.includes(jProc) || jProc.includes(eProc)) return 500;
+        let maxLen = 0;
+        for (let i = 0; i < eProc.length; i++) {
+            for (let j = 0; j < jProc.length; j++) {
+                let len = 0;
+                while (i+len < eProc.length && j+len < jProc.length && eProc[i+len] === jProc[j+len]) len++;
+                if (len > maxLen) maxLen = len;
+            }
+        }
+        let ratio = maxLen / Math.max(eProc.length, jProc.length);
+        return Math.floor(ratio * 100);
+    }
+
+    // Part 5: fixed common group detection (cross-index)
+    function executePart5(onlineArray, baseIndices, maxGroups) {
+        addLog(`Part 5: Anchor rows processing - Fixed common group (any group index)`);
+        const startDataRow = 2;
+        const totalRows = onlineArray.length;
+        let lastNonEmptyRow = startDataRow;
+        for (let r = totalRows - 1; r >= startDataRow; r--) {
+            let aVal = onlineArray[r][0] ? String(onlineArray[r][0]).trim() : "";
+            if (aVal !== "") { lastNonEmptyRow = r; break; }
+        }
+        addLog(`Last non-empty row in column A: ${lastNonEmptyRow+1}`);
+
+        let anchorRows = [];
+        for (let i = startDataRow; i < totalRows; i++) {
+            let jVal = onlineArray[i][baseIndices.colJ] ? String(onlineArray[i][baseIndices.colJ]).trim() : "";
+            if (jVal !== "") anchorRows.push(i);
+        }
+        if (anchorRows.length === 0) {
+            addLog("No rows with non-empty J column, skipping Part 5.");
+            return;
+        }
+        addLog(`Found ${anchorRows.length} anchor rows: ${anchorRows.map(r => r+1).join(', ')}`);
+
+        let baseColCount = baseIndices.colM + 1;
+        let nCol = baseColCount;
+        let oCol = baseColCount + 1;
+        let pCol = baseColCount + 2;
+
+        if (!window._boldCells) window._boldCells = [];
+
+        for (let idx = 0; idx < anchorRows.length; idx++) {
+            let anchorRow = anchorRows[idx];
+            let nextAnchorRow = (idx + 1 < anchorRows.length) ? anchorRows[idx+1] : (lastNonEmptyRow + 1);
+            let startScan = anchorRow + 1;
+            let endScan = nextAnchorRow - 1;
+
+            let anchorJ = onlineArray[anchorRow][baseIndices.colJ] ? String(onlineArray[anchorRow][baseIndices.colJ]).trim() : "";
+
+            // Collect all groups from all valid rows (flattened)
+            let rowsGroupsFlat = []; // each element is a triple object {C,E,F}
+            let perRowGroups = [];   // for similarity and frequency later
+            for (let r = startScan; r <= endScan; r++) {
+                let row = onlineArray[r];
+                let firstC = row[nCol] ? String(row[nCol]).trim() : "";
+                if (firstC === "") continue;
+                let groups = [];
+                for (let g = 0; g < maxGroups; g++) {
+                    let baseCol = baseColCount + g * 3;
+                    let cVal = row[baseCol] ? String(row[baseCol]).trim() : "";
+                    let eVal = row[baseCol+1] ? String(row[baseCol+1]).trim() : "";
+                    let fVal = row[baseCol+2] ? String(row[baseCol+2]).trim() : "";
+                    let triple = { C: cVal, E: eVal, F: fVal };
+                    groups.push(triple);
+                    rowsGroupsFlat.push(triple);
+                }
+                perRowGroups.push(groups);
+            }
+
+            if (perRowGroups.length === 0) {
+                addLog(`Anchor row ${anchorRow+1}: no valid rows (N column empty) in region, adding remark only.`);
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "The conclusion of N/O/P needs to be verified with MO";
+                    window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                }
+                continue;
+            }
+
+            // 1) Common group: triple that appears in every row (any group index)
+            // Build set of triples per row (stringified)
+            let rowTripleSets = perRowGroups.map(groups => {
+                let set = new Set();
+                for (let t of groups) {
+                    let key = `${t.C}|${t.E}|${t.F}`;
+                    if (key !== "||") set.add(key);
+                }
+                return set;
+            });
+            // Find keys that are present in every row
+            let commonKeys = null;
+            for (let i = 0; i < rowTripleSets.length; i++) {
+                if (i === 0) commonKeys = new Set(rowTripleSets[i]);
+                else {
+                    for (let k of commonKeys) {
+                        if (!rowTripleSets[i].has(k)) commonKeys.delete(k);
+                    }
+                }
+                if (commonKeys.size === 0) break;
+            }
+            let commonGroup = null;
+            if (commonKeys && commonKeys.size > 0) {
+                // pick the first (or any) common triple
+                let firstKey = Array.from(commonKeys)[0];
+                let parts = firstKey.split('|');
+                commonGroup = { C: parts[0], E: parts[1], F: parts[2] };
+            }
+
+            if (commonGroup) {
+                onlineArray[anchorRow][nCol] = commonGroup.C;
+                onlineArray[anchorRow][oCol] = commonGroup.E;
+                onlineArray[anchorRow][pCol] = commonGroup.F;
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "Unique in the whole site, safe to use";
+                }
+                window._boldCells.push({ row: anchorRow, col: nCol });
+                window._boldCells.push({ row: anchorRow, col: oCol });
+                window._boldCells.push({ row: anchorRow, col: pCol });
+                if (baseIndices.colM !== -1) window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                addLog(`Anchor row ${anchorRow+1} → Common group (appears in all rows): C="${commonGroup.C}", E="${commonGroup.E}", F="${commonGroup.F}" (remark: Unique)`);
+                continue;
+            }
+
+            // 2) Similarity match (second priority) - evaluate each triple's E against anchorJ
+            let bestSimGroup = null;
+            let bestSimScore = -1;
+            for (let groups of perRowGroups) {
+                for (let t of groups) {
+                    if (t.E === "") continue;
+                    let score = calculateSemanticScore(t.E, anchorJ);
+                    if (score > bestSimScore) {
+                        bestSimScore = score;
+                        bestSimGroup = t;
+                    }
+                }
+            }
+            if (bestSimGroup && bestSimScore > 0) {
+                onlineArray[anchorRow][nCol] = bestSimGroup.C;
+                onlineArray[anchorRow][oCol] = bestSimGroup.E;
+                onlineArray[anchorRow][pCol] = bestSimGroup.F;
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "The conclusion of N/O/P needs to be verified with MO";
+                }
+                window._boldCells.push({ row: anchorRow, col: nCol });
+                window._boldCells.push({ row: anchorRow, col: oCol });
+                window._boldCells.push({ row: anchorRow, col: pCol });
+                if (baseIndices.colM !== -1) window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                addLog(`Anchor row ${anchorRow+1} → Similarity match (score=${bestSimScore}): C="${bestSimGroup.C}", E="${bestSimGroup.E}", F="${bestSimGroup.F}" (remark added)`);
+                continue;
+            }
+
+            // 3) Highest frequency group (third priority) across all triples
+            let freqMap = new Map();
+            for (let t of rowsGroupsFlat) {
+                let key = `${t.C}|${t.E}|${t.F}`;
+                if (key === "||") continue;
+                freqMap.set(key, (freqMap.get(key) || 0) + 1);
+            }
+            let maxFreq = 0;
+            for (let cnt of freqMap.values()) if (cnt > maxFreq) maxFreq = cnt;
+            // collect tied groups
+            let tiedGroups = [];
+            for (let [key, cnt] of freqMap.entries()) {
+                if (cnt === maxFreq) {
+                    let parts = key.split('|');
+                    tiedGroups.push({ C: parts[0], E: parts[1], F: parts[2] });
+                }
+            }
+            let selectedGroup = null;
+            if (tiedGroups.length === 1) {
+                selectedGroup = tiedGroups[0];
+            } else {
+                let bestScore = -1;
+                for (let grp of tiedGroups) {
+                    let score = calculateSemanticScore(grp.E, anchorJ);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        selectedGroup = grp;
+                    }
+                }
+                addLog(`Anchor row ${anchorRow+1}: multiple (${tiedGroups.length}) groups share max frequency ${maxFreq}, selected by similarity (best score=${bestScore})`);
+            }
+            if (selectedGroup) {
+                onlineArray[anchorRow][nCol] = selectedGroup.C;
+                onlineArray[anchorRow][oCol] = selectedGroup.E;
+                onlineArray[anchorRow][pCol] = selectedGroup.F;
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "The conclusion of N/O/P needs to be verified with MO";
+                }
+                window._boldCells.push({ row: anchorRow, col: nCol });
+                window._boldCells.push({ row: anchorRow, col: oCol });
+                window._boldCells.push({ row: anchorRow, col: pCol });
+                if (baseIndices.colM !== -1) window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                addLog(`Anchor row ${anchorRow+1} → Highest frequency (${maxFreq} times) after tie-break: C="${selectedGroup.C}", E="${selectedGroup.E}", F="${selectedGroup.F}" (remark added)`);
+            } else {
+                if (baseIndices.colM !== -1) {
+                    onlineArray[anchorRow][baseIndices.colM] = "The conclusion of N/O/P needs to be verified with MO";
+                    window._boldCells.push({ row: anchorRow, col: baseIndices.colM });
+                }
+                addLog(`Anchor row ${anchorRow+1}: no usable group found, only remark added.`);
+            }
+        }
+        addLog(`Part 5 processing completed.`);
+    }
+
+    // Main pipeline
+    async function runFullConversion(convertType) {
+        if (!onlineWorkbook) { addLog("Please upload online license file first", true); return; }
+        if (!netElemWorkbook || Object.keys(netElemSheetsCache).length === 0) { addLog("Please upload NE mapping set", true); return; }
+        if (!mappingWorkbook || !mappingSheetData.length) { addLog("Please upload 4-to-5 mapping table", true); return; }
+        if (mappingCols.colC === -1) { addLog("Failed to parse mapping table column C", true); return; }
+        currentConvertType = convertType;
+        let onlineRaw = getOnlineSpartSheet();
+        if (!onlineRaw) { addLog("Spart sheet not found in online workbook", true); return; }
+        let onlineExtended = ensureBasicColumns([...onlineRaw]);
+        let baseIndices = getBaseIndices(onlineExtended[0]);
+        if (baseIndices.colL === -1 || baseIndices.colM === -1) { addLog("Basic column extension failed", true); return; }
+        executePart3(convertType, onlineExtended, baseIndices);
+        let maxGroups = executePart4(onlineExtended, baseIndices, mappingSheetData, mappingCols);
+        executePart5(onlineExtended, baseIndices, maxGroups);
+        finalSheetData = onlineExtended;
+        addLog(`✅ ${convertType} processing completed. Click export to download with save path dialog.`);
+    }
+
+    async function exportResult() {
+        if (!finalSheetData) { addLog("Please run conversion before export", true); return; }
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Spart');
+            for (let r = 0; r < finalSheetData.length; r++) {
+                worksheet.addRow(finalSheetData[r]);
+            }
+            if (window._boldCells && window._boldCells.length) {
+                for (let cell of window._boldCells) {
+                    const rowNum = cell.row + 1;
+                    const colLetter = XLSX.utils.encode_col(cell.col);
+                    const cellAddress = colLetter + rowNum;
+                    const excelCell = worksheet.getCell(cellAddress);
+                    excelCell.font = { bold: true };
+                }
+                addLog(`Bold applied to ${window._boldCells.length} cells.`);
+            } else {
+                addLog("No cells need bold styling.");
+            }
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/octet-stream" });
+            const defaultFileName = `After Conversion_${currentConvertType || 'Result'}.xlsx`;
+
+            // Try using modern File System Access API for save dialog
+            if (window.showSaveFilePicker) {
+                try {
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: defaultFileName,
+                        types: [{
+                            description: 'Excel Workbook',
+                            accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+                        }]
+                    });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    addLog(`Export successful: ${fileHandle.name} (chosen location)`);
+                    return;
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        addLog(`Save dialog error: ${err.message}, falling back to default download.`, true);
+                    } else {
+                        addLog(`Save cancelled by user.`);
+                        return;
+                    }
+                }
+            }
+            // Fallback: traditional download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = defaultFileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            addLog(`Export successful (default download): ${defaultFileName}`);
+        } catch (err) {
+            addLog(`Export failed: ${err.message}`, true);
+        }
+    }
+
+    document.getElementById('uncBtn').addEventListener('click', () => runFullConversion('UNC'));
+    document.getElementById('udgBtn').addEventListener('click', () => runFullConversion('UDG'));
+    document.getElementById('exportBtn').addEventListener('click', exportResult);
+</script>
+</body>
 </html>
